@@ -72,7 +72,7 @@ class TextProcessing(object):
     @staticmethod
     def remove_patterns(text: str) -> str:
         try:
-            text = re.sub(r'\©|\×|\⇔|\_|\»|\«|\~|\#|\$|\€|\Â|\�|\¬', '', text)
+            text = re.sub(r'\©|\×|\⇔|\_|\»|\«|\~|\#|\$|\€|\Â|\|\¬', '', text)
             text = re.sub(r'\,|\;|\:|\!|\¡|\’|\‘|\”|\“|\"|\'|\`', '', text)
             text = re.sub(r'\}|\{|\[|\]|\(|\)|\<|\>|\?|\¿|\°|\|', '', text)
             text = re.sub(r'\/|\-|\+|\*|\=|\^|\%|\&|\$', '', text)
@@ -84,15 +84,34 @@ class TextProcessing(object):
     @staticmethod
     def transformer(text: str, stopwords: bool = False) -> str:
         try:
-            text_out = TextProcessing.proper_encoding(text)
+            text_out = str(text)
+            
+            # MODIFICACIÓN APLICADA PARTE 1:
+            # - Se eliminó 'proper_encoding' del inicio para NO borrar tildes/ñ que rompen adverbios y adjetivos.
+            # - Se movió el reemplazo de EMOJIS al principio y con un rango Unicode extendido para atraparlos antes de cualquier limpieza.
+            emoji_pattern = re.compile(
+                "["
+                "\U0001F600-\U0001F64F"
+                "\U0001F300-\U0001F5FF"
+                "\U0001F680-\U0001F6FF"
+                "\U0001F1E0-\U0001F1FF"
+                "\U00002600-\U000027BF"
+                "\U0001F900-\U0001F9FF"
+                "]+", flags=re.UNICODE
+            )
+            text_out = emoji_pattern.sub(' [EMOJI] ', text_out)
+
             text_out = text_out.lower()
-            text_out = re.sub("[\U0001f000-\U000e007f]", '[EMOJI]', text_out)
             text_out = re.sub(
                 r'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+'
                 r'|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?«»“”‘’]))',
-                '[URL]', text_out)
-            text_out = re.sub("@([A-Za-z0-9_]{1,40})", '[MENTION]', text_out)
-            text_out = re.sub("#([A-Za-z0-9_]{1,40})", '[HASTAG]', text_out)
+                ' [URL] ', text_out)
+            text_out = re.sub("@([A-Za-z0-9_]{1,40})", ' [MENTION] ', text_out)
+            
+            # MODIFICACIÓN APLICADA PARTE 2:
+            # - Corregida errata tipográfica: cambiado '[HASTAG]' por '[HASHTAG]' para coincidir con la búsqueda de FeatureExtraction.
+            text_out = re.sub("#([A-Za-z0-9_]{1,40})", ' [HASHTAG] ', text_out)
+            
             text_out = TextProcessing.remove_patterns(text_out)
             # text_out = TextAnalysis.lemmatization(text_out) if lemmatizer else text_out
             text_out = TextProcessing.stopwords(text_out) if stopwords else text_out
